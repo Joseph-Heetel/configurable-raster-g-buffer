@@ -100,15 +100,18 @@ namespace cgbuffer {
                 AddFragmentInput(FragmentInputFlagBits::NORMAL);
                 AddFragmentInput(FragmentInputFlagBits::TANGENT);
                 break;
+            default:
+                break;
         }
         return *this;
     }
 
-    void CGBuffer::AddOutput(std::string_view name, const OutputRecipe& recipe)
+    CGBuffer& CGBuffer::AddOutput(std::string_view name, const OutputRecipe& recipe)
     {
         foray::Assert(mOutputMap.size() < MAX_OUTPUT_COUNT, fmt::format("Can not exceed maximum output count of {}", MAX_OUTPUT_COUNT));
         std::string keycopy(name);
         mOutputMap[keycopy] = std::make_unique<Output>(name, recipe);
+        return *this;
     }
     const CGBuffer::OutputRecipe& CGBuffer::GetOutputRecipe(std::string_view name) const
     {
@@ -143,6 +146,10 @@ namespace cgbuffer {
         CreateOutputs(mContext->GetSwapchainSize());
         CreateRenderPass();
         CreateFrameBuffer();
+        SetupDescriptors();
+        CreateDescriptorSets();
+        CreatePipelineLayout();
+        CreatePipeline();
     }
 
     void CGBuffer::CreateOutputs(const VkExtent2D& size)
@@ -161,6 +168,8 @@ namespace cgbuffer {
                                                      recipe.ImageFormat, size, name);
             image.Create(mContext, ci);
             mOutputList.push_back(pair.second.get());
+            std::string keycopy(name);
+            mImageOutputs[keycopy] = &image;
         }
         mDepthImage.Destroy();
         VkImageUsageFlags depthUsage =
@@ -278,8 +287,10 @@ namespace cgbuffer {
     void CGBuffer::CreatePipeline()
     {
         foray::core::ShaderCompilerConfig shaderConfig;
-        uint32_t                          interfaceFlags = 0;
-        uint32_t                          featuresFlags  = 0;
+        shaderConfig.IncludeDirs.push_back(FORAY_SHADER_DIR);
+
+        uint32_t interfaceFlags = 0;
+        uint32_t featuresFlags  = 0;
 
         for(uint32_t outLocation = 0; outLocation < mOutputList.size(); outLocation++)
         {
@@ -308,13 +319,10 @@ namespace cgbuffer {
         for(uint32_t outLocation = 0; outLocation < mOutputList.size(); outLocation++)
         {
             OutputRecipe& recipe = mOutputList[outLocation]->Recipe;
-            shaderConfig.Definitions.push_back(fmt::format("OUT_{}", outLocation));
-            shaderConfig.Definitions.push_back(fmt::format("OUT_{}_TYPE", outLocation, recipe.Type));
-            shaderConfig.Definitions.push_back(fmt::format("OUT_{}_RESULT", outLocation, recipe.Result));
-            if(recipe.Calculation.size() > 0)
-            {
-                shaderConfig.Definitions.push_back(fmt::format("OUT_{}_CALC", outLocation, recipe.Calculation));
-            }
+            shaderConfig.Definitions.push_back(fmt::format("OUT_{}=1", outLocation));
+            shaderConfig.Definitions.push_back(fmt::format("OUT_{}_TYPE={}", outLocation, ToString(recipe.Type)));
+            shaderConfig.Definitions.push_back(fmt::format("OUT_{}_RESULT=\"{}\"", outLocation, recipe.Result));
+            shaderConfig.Definitions.push_back(fmt::format("OUT_{}_CALC=\"{}\"", outLocation, recipe.Calculation));
         }
 
         mShaderKeys.push_back(mContext->ShaderMan->CompileShader("src/shaders/cgbuf.vert", mVertexShaderModule, shaderConfig));
@@ -346,6 +354,125 @@ namespace cgbuffer {
         // clang-format on
     }
 
+    void CGBuffer::RecordFrame(VkCommandBuffer cmdBuffer, foray::base::FrameRenderInfo& renderInfo)
+    {
+        {
+            VkImageMemoryBarrier2 attachmentMemBarrier{
+                .sType         = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+                .srcStageMask  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+                .srcAccessMask = VK_ACCESS_2_NONE,
+                .dstStageMask  = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                .oldLayout     = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,  // We do not care about the contents of all attachments as they're cleared and rewritten completely
+                .newLayout     = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .subresourceRange =
+                    VkImageSubresourceRange{
+                        .aspectMask     = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
+                        .baseMipLevel   = 0,
+                        .levelCount     = 1,
+                        .baseArrayLayer = 0,
+                        .layerCount     = 1,
+                    },
+            };
+
+            std::vector<VkImageMemoryBarrier2> imgBarriers(mOutputList.size() + 1);
+
+            for(uint32_t i = 0; i < mOutputList.size(); i++)
+            {
+                Output&                info    = *mOutputList[i];
+                VkImageMemoryBarrier2& barrier = imgBarriers[i];
+
+                barrier       = attachmentMemBarrier;
+                barrier.image = info.Image.GetImage();
+            }
+            VkImageMemoryBarrier2& depthBarrier      = imgBarriers.back();
+            depthBarrier                             = attachmentMemBarrier;
+            depthBarrier.dstStageMask                = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+            depthBarrier.dstAccessMask               = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR;
+            depthBarrier.newLayout                   = VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            depthBarrier.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT;
+            depthBarrier.image                       = mDepthImage.GetImage();
+
+            std::vector<VkBufferMemoryBarrier2> bufferBarriers;
+
+            VkBufferMemoryBarrier2 bufferBarrier{.sType               = VkStructureType::VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+                                                 .srcStageMask        = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+                                                 .srcAccessMask       = VK_ACCESS_2_MEMORY_WRITE_BIT,
+                                                 .dstStageMask        = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT,
+                                                 .dstAccessMask       = VK_ACCESS_2_SHADER_READ_BIT,
+                                                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                                                 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                                                 .offset              = 0,
+                                                 .size                = VK_WHOLE_SIZE};
+
+            auto materialBuffer = mScene->GetComponent<foray::scene::gcomp::MaterialManager>();
+            auto cameraManager  = mScene->GetComponent<foray::scene::gcomp::CameraManager>();
+            auto drawDirector   = mScene->GetComponent<foray::scene::gcomp::DrawDirector>();
+
+            bufferBarrier.buffer = materialBuffer->GetVkBuffer();
+            bufferBarriers.push_back(bufferBarrier);
+            bufferBarriers.push_back(cameraManager->GetUbo().MakeBarrierPrepareForRead(VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT, VK_ACCESS_2_SHADER_READ_BIT));
+            bufferBarrier.buffer = drawDirector->GetCurrentTransformsVkBuffer();
+            bufferBarriers.push_back(bufferBarrier);
+            bufferBarrier.buffer = drawDirector->GetPreviousTransformsVkBuffer();
+            bufferBarriers.push_back(bufferBarrier);
+
+            VkDependencyInfo depInfo{
+                .sType                    = VkStructureType::VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+                .dependencyFlags          = VkDependencyFlagBits::VK_DEPENDENCY_BY_REGION_BIT,
+                .bufferMemoryBarrierCount = (uint32_t)bufferBarriers.size(),
+                .pBufferMemoryBarriers    = bufferBarriers.data(),
+                .imageMemoryBarrierCount  = (uint32_t)imgBarriers.size(),
+                .pImageMemoryBarriers     = imgBarriers.data(),
+            };
+
+            vkCmdPipelineBarrier2(cmdBuffer, &depInfo);
+        }
+
+        std::vector<VkClearValue> clearValues(mOutputList.size() + 1);
+
+        for(uint32_t i = 0; i < mOutputList.size(); i++)
+        {
+            clearValues[i].color = mOutputList[i]->Recipe.ClearValue;
+        }
+        clearValues.back().depthStencil = VkClearDepthStencilValue{1.f, 0};
+
+        VkRenderPassBeginInfo renderPassBeginInfo{};
+        renderPassBeginInfo.sType             = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassBeginInfo.renderPass        = mRenderpass;
+        renderPassBeginInfo.framebuffer       = mFrameBuffer;
+        renderPassBeginInfo.renderArea.extent = mContext->GetSwapchainSize();
+        renderPassBeginInfo.clearValueCount   = static_cast<uint32_t>(clearValues.size());
+        renderPassBeginInfo.pClearValues      = clearValues.data();
+
+        vkCmdBeginRenderPass(cmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        VkViewport viewport{0.f, 0.f, (float)mContext->GetSwapchainSize().width, (float)mContext->GetSwapchainSize().height, 0.0f, 1.0f};
+        vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+
+        VkRect2D scissor{VkOffset2D{}, VkExtent2D{mContext->GetSwapchainSize()}};
+        vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
+
+        vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
+
+        VkDescriptorSet descriptorSet = mDescriptorSet.GetDescriptorSet();
+        // Instanced object
+        vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+
+        mScene->Draw(renderInfo, mPipelineLayout, cmdBuffer);
+
+        vkCmdEndRenderPass(cmdBuffer);
+
+        // The GBuffer determines the images layouts
+
+        for(uint32_t i = 0; i < mOutputList.size(); i++)
+        {
+            renderInfo.GetImageLayoutCache().Set(mOutputList[i]->Image, VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+        }
+    }
+
     void CGBuffer::Resize(const VkExtent2D& extent)
     {
         if(!!mFrameBuffer)
@@ -365,6 +492,36 @@ namespace cgbuffer {
         mDepthImage.Resize(extent);
 
         CreateFrameBuffer();
+    }
+
+    void CGBuffer::Destroy()
+    {
+        if(!mContext)
+        {
+            return;
+        }
+        VkDevice device = mContext->Device();
+        if(mPipeline)
+        {
+            vkDestroyPipeline(device, mPipeline, nullptr);
+            mPipeline = nullptr;
+        }
+        mPipelineLayout.Destroy();
+        mDescriptorSet.Destroy();
+        mVertexShaderModule.Destroy();
+        mFragmentShaderModule.Destroy();
+        RenderStage::DestroyOutputImages();
+        mDepthImage.Destroy();
+        if(mFrameBuffer)
+        {
+            vkDestroyFramebuffer(device, mFrameBuffer, nullptr);
+            mFrameBuffer = nullptr;
+        }
+        if(mRenderpass)
+        {
+            vkDestroyRenderPass(device, mRenderpass, nullptr);
+            mRenderpass = nullptr;
+        }
     }
 
 }  // namespace cgbuffer

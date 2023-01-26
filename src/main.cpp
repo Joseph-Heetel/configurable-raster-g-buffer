@@ -10,9 +10,11 @@ namespace cgbuffer {
         virtual void ApiInit() override;
         virtual void InitCreateVma() override;
         virtual void ApiRender(foray::base::FrameRenderInfo& renderInfo) override;
+        virtual void ApiOnEvent(const foray::osi::Event* event) override;
         virtual void ApiDestroy() override;
 
-        CGBuffer mGBufferStage;
+        CGBuffer                             mGBufferStage;
+        foray::stages::ImageToSwapchainStage mSwapCopy;
         struct
         {
             VkPhysicalDeviceBufferDeviceAddressFeatures   BufferDeviceAdressFeatures = {};
@@ -85,20 +87,39 @@ namespace cgbuffer {
 
         foray::gltf::ModelConverter converter(mScene.get());
         converter.LoadGltfModel(SCENE_DIR);
+        mScene->UseDefaultCamera(true);
+
+        CGBuffer::OutputRecipe flatRedOnBlack{.Type = CGBuffer::FragmentOutputType::VEC4, .ImageFormat = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, .Result = "1, 0, 0, 1"};
+        mGBufferStage.AddOutput("flatRedOnBlack", flatRedOnBlack).Build(&mContext, mScene.get());
+
+        mSwapCopy.Init(&mContext, mGBufferStage.GetImageOutput("flatRedOnBlack"));
+        mSwapCopy.SetFlipY(true);
+
+        RegisterRenderStage(&mGBufferStage);
+        RegisterRenderStage(&mSwapCopy);
     }
     void GBufferTestApp::ApiRender(foray::base::FrameRenderInfo& renderInfo)
     {
         foray::core::DeviceSyncCommandBuffer& cb = renderInfo.GetPrimaryCommandBuffer();
         cb.Begin();
-        renderInfo.ClearSwapchainImage(cb);
+        mScene->Update(renderInfo, cb);
+
+        mGBufferStage.RecordFrame(cb, renderInfo);
+        mSwapCopy.RecordFrame(cb, renderInfo);
+
         renderInfo.PrepareSwapchainImageForPresent(cb);
         cb.End();
         cb.Submit();
     }
-    void GBufferTestApp::ApiDestroy() 
+    void GBufferTestApp::ApiOnEvent(const foray::osi::Event* event)
+    {
+        mScene->HandleEvent(event);
+    }
+    void GBufferTestApp::ApiDestroy()
     {
         mScene = nullptr;
         mGBufferStage.Destroy();
+        mSwapCopy.Destroy();
     }
 }  // namespace cgbuffer
 

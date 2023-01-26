@@ -2,13 +2,8 @@
 #extension GL_GOOGLE_include_directive : enable
 #extension GL_EXT_nonuniform_qualifier : enable
 
-layout(location = 0) in vec3 inWorldPos;             // Vertex position in world space
-layout(location = 1) in vec4 inDevicePos;            // Vertex position in normalized device space (current frame)
-layout(location = 2) in vec4 inOldDevicePos;         // Vertex position in normalized device space (previous frame)
-layout(location = 3) in vec3 inNormal;               // Normal in world space
-layout(location = 4) in vec3 inTangent;              // Tangent in world space
-layout(location = 5) in vec2 inUV;                   // UV coordinates
-layout(location = 6) flat in uint inMeshInstanceId;  // Mesh Instance Id
+#define INTERFACEMODE in
+#include "shaderinterface.glsl"
 
 #if OUT_0
 layout(location = 0) out OUT_0_TYPE out0;

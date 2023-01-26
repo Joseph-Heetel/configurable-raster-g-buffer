@@ -65,7 +65,7 @@ namespace cgbuffer {
             OutputRecipe& EnableBuiltInFeature(BuiltInFeaturesFlagBits feature);
         };
 
-        void                AddOutput(std::string_view name, const OutputRecipe& recipe);
+        CGBuffer&           AddOutput(std::string_view name, const OutputRecipe& recipe);
         const OutputRecipe& GetOutputRecipe(std::string_view name) const;
 
         virtual void Build(foray::core::Context* context, foray::scene::Scene* scene);
