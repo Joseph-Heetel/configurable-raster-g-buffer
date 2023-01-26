@@ -107,6 +107,31 @@ namespace cgbuffer {
         return *this;
     }
 
+    CGBuffer& CGBuffer::EnableBuiltInFeature(BuiltInFeaturesFlagBits feature)
+    {
+        mBuiltInFeaturesFlagsGlobal |= (uint32_t)feature;
+        switch(feature)
+        {
+            case BuiltInFeaturesFlagBits::MATERIALPROBE:
+                mInterfaceFlagsGlobal |= (uint32_t)FragmentInputFlagBits::UV;
+                break;
+            case BuiltInFeaturesFlagBits::MATERIALPROBEALPHA:
+                mInterfaceFlagsGlobal |= (uint32_t)FragmentInputFlagBits::UV;
+                break;
+            case BuiltInFeaturesFlagBits::ALPHATEST:
+                mInterfaceFlagsGlobal |= (uint32_t)FragmentInputFlagBits::UV;
+                break;
+            case BuiltInFeaturesFlagBits::NORMALMAPPING:
+                mInterfaceFlagsGlobal |= (uint32_t)FragmentInputFlagBits::UV;
+                mInterfaceFlagsGlobal |= (uint32_t)FragmentInputFlagBits::NORMAL;
+                mInterfaceFlagsGlobal |= (uint32_t)FragmentInputFlagBits::TANGENT;
+                break;
+            default:
+                break;
+        }
+        return *this;
+    }
+
     CGBuffer& CGBuffer::AddOutput(std::string_view name, const OutputRecipe& recipe)
     {
         foray::Assert(mOutputMap.size() < MAX_OUTPUT_COUNT, fmt::format("Can not exceed maximum output count of {}", MAX_OUTPUT_COUNT));
@@ -290,8 +315,8 @@ namespace cgbuffer {
         foray::core::ShaderCompilerConfig shaderConfig;
         shaderConfig.IncludeDirs.push_back(FORAY_SHADER_DIR);
 
-        uint32_t interfaceFlags = 0;
-        uint32_t featuresFlags  = 0;
+        uint32_t interfaceFlags = mInterfaceFlagsGlobal;
+        uint32_t featuresFlags  = mBuiltInFeaturesFlagsGlobal;
 
         for(uint32_t outLocation = 0; outLocation < mOutputList.size(); outLocation++)
         {

@@ -63,18 +63,24 @@ void main()
 {
 #if MATERIALPROBE || NORMALMAPPING
     MaterialBufferObject material = GetMaterialOrFallback(PushConstant.MaterialIndex);
+    #define EXISTS_MATERIAL 1
 
     MaterialProbe probe = ProbeMaterial(material, UV);
-#else
+    #define EXISTS_PROBE 1
+#endif
 #if MATERIALPROBEALPHA || ALPHATEST
-#if MATERIALPROBE
-    bool isOpaque = probe.BaseColor.w > 0.f;
-#else
-    MaterialBufferObject material = GetMaterialOrFallback(PushConstant.MaterialIndex);
+    #if EXISTS_PROBE
+        bool isOpaque = probe.BaseColor.a > 0.f;
+        #define EXISTS_ISOPAQUE 1
+    #else
+    #if !EXISTS_MATERIAL
+        MaterialBufferObject material = GetMaterialOrFallback(PushConstant.MaterialIndex);
+        #define EXISTS_MATERIAL 1
+    #endif
 
-    bool isOpaque = ProbeAlphaOpacity(material, uv);
-#endif
-#endif
+        bool isOpaque = ProbeAlphaOpacity(material, uv);
+        #define EXISTS_ISOPAQUE 1
+    #endif
 #endif
 #if ALPHATEST
     if (!isOpaque)
@@ -84,6 +90,7 @@ void main()
 #endif
 #if NORMALMAPPING
     vec3 NormalMapped = ApplyNormalMap(CalculateTBN(Normal, Tangent), probe);
+    #define EXISTS_NORMALMAPPED 1
 #endif
 
 #if OUT_0

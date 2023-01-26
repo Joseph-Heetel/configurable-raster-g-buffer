@@ -65,6 +65,8 @@ namespace cgbuffer {
             OutputRecipe& EnableBuiltInFeature(BuiltInFeaturesFlagBits feature);
         };
 
+        CGBuffer& EnableBuiltInFeature(BuiltInFeaturesFlagBits feature);
+
         CGBuffer&           AddOutput(std::string_view name, const OutputRecipe& recipe);
         const OutputRecipe& GetOutputRecipe(std::string_view name) const;
 
@@ -93,6 +95,9 @@ namespace cgbuffer {
         OutputList                mOutputList;
         foray::core::ManagedImage mDepthImage;
         foray::scene::Scene*      mScene = nullptr;
+
+        uint32_t mBuiltInFeaturesFlagsGlobal = 0;
+        uint32_t mInterfaceFlagsGlobal = 0;
 
         foray::core::ShaderModule mVertexShaderModule;
         foray::core::ShaderModule mFragmentShaderModule;
