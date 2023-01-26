@@ -13,7 +13,7 @@ namespace cgbuffer {
         virtual void ApiOnEvent(const foray::osi::Event* event) override;
         virtual void ApiDestroy() override;
 
-        CGBuffer                             mGBufferStage;
+        CRaster                             mGBufferStage;
         foray::stages::ImageToSwapchainStage mSwapCopy;
         struct
         {
@@ -89,15 +89,15 @@ namespace cgbuffer {
         converter.LoadGltfModel(SCENE_DIR);
         mScene->UseDefaultCamera(true);
 
-        CGBuffer::OutputRecipe flatRedOnBlack{.Type = CGBuffer::FragmentOutputType::VEC4, .ImageFormat = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, .Result = "1, 0, 0, 1"};
+        CRaster::OutputRecipe flatRedOnBlack{.Type = CRaster::FragmentOutputType::VEC4, .ImageFormat = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, .Result = "1, 0, 0, 1"};
         mGBufferStage.AddOutput("flatRedOnBlack", flatRedOnBlack);
 
         std::string_view       normalMappingCalc = "vec3 normaldiff = abs(Normal - normalMapped);";
-        CGBuffer::OutputRecipe normalMapping{
-            .Type = CGBuffer::FragmentOutputType::VEC4, .ImageFormat = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, .Result = "normaldiff, 0.f", .Calculation = std::string(normalMappingCalc)};
-        normalMapping.EnableBuiltInFeature(CGBuffer::BuiltInFeaturesFlagBits::NORMALMAPPING);
+        CRaster::OutputRecipe normalMapping{
+            .Type = CRaster::FragmentOutputType::VEC4, .ImageFormat = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, .Result = "normaldiff, 0.f", .Calculation = std::string(normalMappingCalc)};
+        normalMapping.EnableBuiltInFeature(CRaster::BuiltInFeaturesFlagBits::NORMALMAPPING);
         mGBufferStage.AddOutput("normalMapping", normalMapping);
-        mGBufferStage.EnableBuiltInFeature(CGBuffer::BuiltInFeaturesFlagBits::ALPHATEST);
+        mGBufferStage.EnableBuiltInFeature(CRaster::BuiltInFeaturesFlagBits::ALPHATEST);
 
         mGBufferStage.Build(&mContext, mScene.get());
 

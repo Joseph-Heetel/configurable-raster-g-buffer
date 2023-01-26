@@ -10,56 +10,56 @@
 namespace cgbuffer {
 
     // clang-format off
-    const CGBuffer::OutputRecipe CGBuffer::Templates::WorldPos =  
+    const CRaster::OutputRecipe CRaster::Templates::WorldPos =  
         {.FragmentInputFlags = (uint32_t)FragmentInputFlagBits::WORLDPOS,
          .Type               = FragmentOutputType::VEC4,
          .ImageFormat        = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
          .Result             = "WorldPos,0"};
 
-    const CGBuffer::OutputRecipe CGBuffer::Templates::WorldNormal = 
+    const CRaster::OutputRecipe CRaster::Templates::WorldNormal = 
         {.BuiltInFeaturesFlags = (uint32_t)BuiltInFeaturesFlagBits::NORMALMAPPING,
          .Type                 = FragmentOutputType::VEC4,
          .ImageFormat          = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
          .Result               = "normalMapped,0"};
 
-    const CGBuffer::OutputRecipe CGBuffer::Templates::Albedo = 
+    const CRaster::OutputRecipe CRaster::Templates::Albedo = 
         {.BuiltInFeaturesFlags = (uint32_t)BuiltInFeaturesFlagBits::MATERIALPROBE,
          .Type                 = FragmentOutputType::VEC4,
          .ImageFormat          = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
          .Result               = "probe.BaseColor.rgb,1"};
 
-    const CGBuffer::OutputRecipe CGBuffer::Templates::MaterialId = 
+    const CRaster::OutputRecipe CRaster::Templates::MaterialId = 
         {.Type = FragmentOutputType::INT, 
          .ImageFormat = VkFormat::VK_FORMAT_R32_SINT, 
          .ClearValue         = {-1},
          .Result = "PushConstant.MaterialIndex"};
 
-    const CGBuffer::OutputRecipe CGBuffer::Templates::MeshInstanceId = 
+    const CRaster::OutputRecipe CRaster::Templates::MeshInstanceId = 
         {.FragmentInputFlags = (uint32_t)FragmentInputFlagBits::MESHID,
          .Type               = FragmentOutputType::INT,
          .ImageFormat        = VkFormat::VK_FORMAT_R32_SINT,
          .ClearValue         = {-1},
          .Result             = "MeshInstanceId"};
 
-    const CGBuffer::OutputRecipe CGBuffer::Templates::UV = 
+    const CRaster::OutputRecipe CRaster::Templates::UV = 
         {.FragmentInputFlags = (uint32_t)FragmentInputFlagBits::UV,
          .Type               = FragmentOutputType::VEC2,
          .ImageFormat        = VkFormat::VK_FORMAT_R16G16_SFLOAT,
          .Result             = "UV"};
 
-    const CGBuffer::OutputRecipe CGBuffer::Templates::ScreenMotion = 
+    const CRaster::OutputRecipe CRaster::Templates::ScreenMotion = 
         {.FragmentInputFlags = (uint32_t)FragmentInputFlagBits::DEVICEPOS | (uint32_t)FragmentInputFlagBits::DEVICEPOSOLD,
          .Type               = FragmentOutputType::VEC2,
          .ImageFormat        = VkFormat::VK_FORMAT_R16G16_SFLOAT,
          .Result             = "((DevicePosOld.xy / DevicePosOld.w) - (DevicePos.xy / DevicePos.w)) * 0.5"};
 
-    const CGBuffer::OutputRecipe CGBuffer::Templates::WorldMotion = 
+    const CRaster::OutputRecipe CRaster::Templates::WorldMotion = 
         {.FragmentInputFlags = (uint32_t)FragmentInputFlagBits::WORLDPOS | (uint32_t)FragmentInputFlagBits::WORLDPOSOLD,
          .Type               = FragmentOutputType::VEC4,
          .ImageFormat        = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
          .Result             = "WorldPosOld - WorldPos, 0.f"};
 
-    const CGBuffer::OutputRecipe CGBuffer::Templates::DepthAndDerivative = 
+    const CRaster::OutputRecipe CRaster::Templates::DepthAndDerivative = 
         {.FragmentInputFlags = (uint32_t)FragmentInputFlagBits::DEVICEPOS,
          .Type               = FragmentOutputType::VEC2,
          .ImageFormat        = VkFormat::VK_FORMAT_R16G16_SFLOAT,
@@ -69,7 +69,7 @@ namespace cgbuffer {
     // clang-format on
 
 
-    std::string CGBuffer::ToString(FragmentInputFlagBits input)
+    std::string CRaster::ToString(FragmentInputFlagBits input)
     {
         switch(input)
         {
@@ -93,7 +93,7 @@ namespace cgbuffer {
                 FORAY_THROWFMT("Unhandled FragmentInputFlagBits value 0x{:x}", (uint32_t)input);
         }
     }
-    std::string CGBuffer::ToString(BuiltInFeaturesFlagBits feature)
+    std::string CRaster::ToString(BuiltInFeaturesFlagBits feature)
     {
         switch(feature)
         {
@@ -109,7 +109,7 @@ namespace cgbuffer {
                 FORAY_THROWFMT("Unhandled BuiltInFeaturesFlagBits value 0x{:x}", (uint32_t)feature);
         }
     }
-    std::string CGBuffer::ToString(FragmentOutputType type)
+    std::string CRaster::ToString(FragmentOutputType type)
     {
         switch(type)
         {
@@ -138,12 +138,12 @@ namespace cgbuffer {
         }
     }
 
-    CGBuffer::OutputRecipe& CGBuffer::OutputRecipe::AddFragmentInput(FragmentInputFlagBits input)
+    CRaster::OutputRecipe& CRaster::OutputRecipe::AddFragmentInput(FragmentInputFlagBits input)
     {
         FragmentInputFlags |= (uint32_t)input;
         return *this;
     }
-    CGBuffer::OutputRecipe& CGBuffer::OutputRecipe::EnableBuiltInFeature(BuiltInFeaturesFlagBits feature)
+    CRaster::OutputRecipe& CRaster::OutputRecipe::EnableBuiltInFeature(BuiltInFeaturesFlagBits feature)
     {
         BuiltInFeaturesFlags |= (uint32_t)feature;
         switch(feature)
@@ -168,7 +168,7 @@ namespace cgbuffer {
         return *this;
     }
 
-    CGBuffer& CGBuffer::EnableBuiltInFeature(BuiltInFeaturesFlagBits feature)
+    CRaster& CRaster::EnableBuiltInFeature(BuiltInFeaturesFlagBits feature)
     {
         mBuiltInFeaturesFlagsGlobal |= (uint32_t)feature;
         switch(feature)
@@ -193,16 +193,16 @@ namespace cgbuffer {
         return *this;
     }
 
-    CGBuffer& CGBuffer::AddOutput(std::string_view name, const OutputRecipe& recipe)
+    CRaster& CRaster::AddOutput(std::string_view name, const OutputRecipe& recipe)
     {
         foray::Assert(mOutputMap.size() < MAX_OUTPUT_COUNT, fmt::format("Can not exceed maximum output count of {}", MAX_OUTPUT_COUNT));
         foray::Assert(!mPipeline, "Must add outputs before building!");
-        std::string keycopy(name);
+        std::string              keycopy(name);
         std::unique_ptr<Output>& output = mOutputMap[keycopy] = std::make_unique<Output>(name, recipe);
         mOutputList.push_back(output.get());
         return *this;
     }
-    const CGBuffer::OutputRecipe& CGBuffer::GetOutputRecipe(std::string_view name) const
+    const CRaster::OutputRecipe& CRaster::GetOutputRecipe(std::string_view name) const
     {
         std::string               keycopy(name);
         OutputMap::const_iterator iter = mOutputMap.find(keycopy);
@@ -213,7 +213,7 @@ namespace cgbuffer {
         FORAY_THROWFMT("CGBuffer does not contain output \"{}\"!", name);
     }
 
-    VkAttachmentDescription CGBuffer::Output::GetAttachmentDescr() const
+    VkAttachmentDescription CRaster::Output::GetAttachmentDescr() const
     {
         return VkAttachmentDescription{.flags          = 0,
                                        .format         = Image.GetFormat(),
@@ -226,11 +226,12 @@ namespace cgbuffer {
                                        .finalLayout    = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
     }
 
-    void CGBuffer::Build(foray::core::Context* context, foray::scene::Scene* scene)
+    void CRaster::Build(foray::core::Context* context, foray::scene::Scene* scene, std::string_view name = "CRaster")
     {
         Destroy();
         mContext = context;
         mScene   = scene;
+        mName    = std::string(name);
 
         CreateOutputs(mContext->GetSwapchainSize());
         CreateRenderPass();
@@ -241,7 +242,7 @@ namespace cgbuffer {
         CreatePipeline();
     }
 
-    void CGBuffer::CreateOutputs(const VkExtent2D& size)
+    void CRaster::CreateOutputs(const VkExtent2D& size)
     {
         for(auto& pair : mOutputMap)
         {
@@ -259,14 +260,16 @@ namespace cgbuffer {
             mImageOutputs[keycopy] = &image;
         }
         mDepthImage.Destroy();
+        mDepthOutputName = fmt::format("{}.Depth", mName);
         VkImageUsageFlags depthUsage =
             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-        foray::core::ManagedImage::CreateInfo ci(depthUsage, VK_FORMAT_D32_SFLOAT, size, "CGBuffer.Depth");
+        foray::core::ManagedImage::CreateInfo ci(depthUsage, VK_FORMAT_D32_SFLOAT, size, mDepthOutputName);
         ci.ImageViewCI.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT;
         mDepthImage.Create(mContext, ci);
+        mImageOutputs[mDepthOutputName] = &mDepthImage;
     }
 
-    void CGBuffer::CreateRenderPass()
+    void CRaster::CreateRenderPass()
     {
         std::vector<VkAttachmentReference>   colorAttachmentRefs;
         std::vector<VkAttachmentDescription> attachmentDescr;
@@ -323,7 +326,7 @@ namespace cgbuffer {
         renderPassInfo.pDependencies          = subPassDependencies;
         foray::AssertVkResult(vkCreateRenderPass(mContext->Device(), &renderPassInfo, nullptr, &mRenderpass));
     }
-    void CGBuffer::CreateFrameBuffer()
+    void CRaster::CreateFrameBuffer()
     {
         std::vector<VkImageView> attachmentViews;
 
@@ -345,7 +348,7 @@ namespace cgbuffer {
         foray::AssertVkResult(vkCreateFramebuffer(mContext->Device(), &fbufCreateInfo, nullptr, &mFrameBuffer));
     }
 
-    void CGBuffer::SetupDescriptors()
+    void CRaster::SetupDescriptors()
     {
         auto materialBuffer = mScene->GetComponent<foray::scene::gcomp::MaterialManager>();
         auto textureStore   = mScene->GetComponent<foray::scene::gcomp::TextureManager>();
@@ -358,12 +361,12 @@ namespace cgbuffer {
         mDescriptorSet.SetDescriptorAt(4, drawDirector->GetPreviousTransformsDescriptorInfo(), VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
     }
 
-    void CGBuffer::CreateDescriptorSets()
+    void CRaster::CreateDescriptorSets()
     {
-        mDescriptorSet.Create(mContext, "CGBuffer.DescriptorSet");
+        mDescriptorSet.Create(mContext, fmt::format("{}.DescriptorSet", mName));
     }
 
-    void CGBuffer::CreatePipelineLayout()
+    void CRaster::CreatePipelineLayout()
     {
         mPipelineLayout.AddDescriptorSetLayout(mDescriptorSet.GetDescriptorSetLayout());
         mPipelineLayout.AddPushConstantRange<foray::scene::DrawPushConstant>(VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT
@@ -371,7 +374,7 @@ namespace cgbuffer {
         mPipelineLayout.Build(mContext);
     }
 
-    void CGBuffer::CreatePipeline()
+    void CRaster::CreatePipeline()
     {
         foray::core::ShaderCompilerConfig shaderConfig;
         shaderConfig.IncludeDirs.push_back(FORAY_SHADER_DIR);
@@ -441,7 +444,7 @@ namespace cgbuffer {
         // clang-format on
     }
 
-    void CGBuffer::RecordFrame(VkCommandBuffer cmdBuffer, foray::base::FrameRenderInfo& renderInfo)
+    void CRaster::RecordFrame(VkCommandBuffer cmdBuffer, foray::base::FrameRenderInfo& renderInfo)
     {
         {
             VkImageMemoryBarrier2 attachmentMemBarrier{
@@ -560,7 +563,7 @@ namespace cgbuffer {
         }
     }
 
-    void CGBuffer::Resize(const VkExtent2D& extent)
+    void CRaster::Resize(const VkExtent2D& extent)
     {
         if(!!mFrameBuffer)
         {
@@ -581,7 +584,7 @@ namespace cgbuffer {
         CreateFrameBuffer();
     }
 
-    void CGBuffer::Destroy()
+    void CRaster::Destroy()
     {
         if(!mContext)
         {

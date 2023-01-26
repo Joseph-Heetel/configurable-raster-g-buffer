@@ -3,10 +3,13 @@
 
 namespace cgbuffer {
 
-    /// @brief Fully configurable G-Buffer: Customizable attachment count, output calculation and toggleable built-in features
+    /// @brief Fully configurable rasterized stage: Customizable attachment count, output calculation and toggleable built-in features
     /// @details
-    ///
-    class CGBuffer : public foray::stages::RasterizedRenderStage
+    /// How to use: Add Outputs, Build, Get Outputs
+    ///  - Add Outputs: See documentation of CRaster::OutputRecipe and CRaster::AddOutput()
+    ///  - Build: See CRaster::Build()
+    ///  - Get Outputs: See RenderStage::GetImageOutput()
+    class CRaster : public foray::stages::RasterizedRenderStage
     {
       public:
         inline static constexpr uint32_t MAX_OUTPUT_COUNT = 16;
@@ -31,8 +34,6 @@ namespace cgbuffer {
             MESHID  = 0x080,
             MAXENUM = 0x100,
         };
-
-        static std::string ToString(FragmentInputFlagBits input);
 
         enum class BuiltInFeaturesFlagBits : uint32_t
         {
@@ -64,8 +65,6 @@ namespace cgbuffer {
             MAXENUM       = 0x10,
         };
 
-        static std::string ToString(BuiltInFeaturesFlagBits feature);
-
         /// @brief Defines which type is listed with the output location in the fragment shader
         enum class FragmentOutputType
         {
@@ -82,8 +81,6 @@ namespace cgbuffer {
             UVEC3,
             UVEC4,
         };
-
-        static std::string ToString(FragmentOutputType type);
 
         /// @brief Defines the custom GBuffer output to generate
         struct OutputRecipe
@@ -133,24 +130,27 @@ namespace cgbuffer {
         };
 
         /// @brief Enable a builtin feature (such as ALPHATEST) regardless of outputs generated
-        CGBuffer& EnableBuiltInFeature(BuiltInFeaturesFlagBits feature);
+        CRaster& EnableBuiltInFeature(BuiltInFeaturesFlagBits feature);
 
         /// @brief Add an Output to the GBuffer
         /// @remarks MUST be called before Build(), ONLY MAX CGBuffer::MAX_OUTPUT_COUNT may be set!
         /// @param name Identifier (access the generated image via GetImageOutput(name))
         /// @param recipe Information for layout and type of data generated and calculation
-        CGBuffer& AddOutput(std::string_view name, const OutputRecipe& recipe);
+        CRaster& AddOutput(std::string_view name, const OutputRecipe& recipe);
         /// @brief Readonly access to an output recipe
         const OutputRecipe& GetOutputRecipe(std::string_view name) const;
 
         /// @brief Builds the GBuffer. Make sure to add all outputs before!
-        virtual void Build(foray::core::Context* context, foray::scene::Scene* scene);
+        virtual void Build(foray::core::Context* context, foray::scene::Scene* scene, std::string_view name = "CRaster");
 
         virtual void RecordFrame(VkCommandBuffer cmdBuffer, foray::base::FrameRenderInfo& renderInfo) override;
 
         virtual void Resize(const VkExtent2D& extent) override;
 
         virtual void Destroy() override;
+
+        /// @brief Gets the depth image
+        foray::core::ManagedImage* GetDepthImage();
 
       protected:
         struct Output
@@ -175,6 +175,13 @@ namespace cgbuffer {
 
         foray::core::ShaderModule mVertexShaderModule;
         foray::core::ShaderModule mFragmentShaderModule;
+
+        std::string mDepthOutputName = "";
+        std::string mName            = "";
+
+        static std::string ToString(FragmentOutputType type);
+        static std::string ToString(BuiltInFeaturesFlagBits feature);
+        static std::string ToString(FragmentInputFlagBits input);
 
         void         CreateOutputs(const VkExtent2D& size);
         void         CreateRenderPass();
