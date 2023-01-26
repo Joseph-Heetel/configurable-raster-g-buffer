@@ -18,23 +18,23 @@ void main()
 {
     mat4 ModelMat     = GetCurrentTransform(PushConstant.TransformBufferOffset + gl_InstanceIndex);
 
-#if WORLDPOSOLD || DEVICEPOSOLD
+#if(INTERFACE_WORLDPOSOLD || INTERFACE_DEVICEPOSOLD)
     mat4 ModelMatPrev = GetPreviousTransform(PushConstant.TransformBufferOffset + gl_InstanceIndex);
 #endif
 
     // Get transformations out of the way
-#if WORLDPOS
+#if INTERFACE_WORLDPOS
     WorldPos     = (ModelMat * vec4(inPos, 1.f)).xyz;
 #endif
-#if WORLDPOSOLD
+#if INTERFACE_WORLDPOSOLD
     WorldPosOld     = (ModelMatPrev * vec4(inPos, 1.f)).xyz;
 #endif
-#if !DEVICEPOS
+#ifndef INTERFACE_DEVICEPOS
     vec4 DevicePos;
 #endif
     DevicePos    = Camera.ProjectionViewMatrix * ModelMat * vec4(inPos, 1.f);
     gl_Position     = DevicePos;
-#if DEVICEPOSOLD
+#if INTERFACE_DEVICEPOSOLD
     OldDevicePos = Camera.PreviousProjectionViewMatrix * ModelMatPrev * vec4(inPos, 1.f);
 #endif
 
@@ -43,17 +43,17 @@ void main()
     #endif
 
     // Normal in world space
-#if NORMAL || TANGENT
+#if(INTERFACE_NORMAL || INTERFACE_TANGENT)
     mat3 mNormal = transpose(inverse(mat3(ModelMat)));
-#if NORMAL
+#endif
+#if INTERFACE_NORMAL
     Normal    = mNormal * inNormal;
 #endif
-#if TANGENT
-    outTangent   = mNormal * inTangent;
-#endif
+#if INTERFACE_TANGENT
+    Tangent   = mNormal * inTangent;
 #endif
 
-#if MESHID
+#if INTERFACE_MESHID
     MeshInstanceId = PushConstant.TransformBufferOffset + gl_InstanceIndex;
 #endif
 }

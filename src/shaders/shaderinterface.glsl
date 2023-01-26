@@ -1,24 +1,24 @@
-#if WORLDPOS
+#if INTERFACE_WORLDPOS
 layout(location = 0) INTERFACEMODE vec3 WorldPos;
 #endif
-#if WORLDPOSOLD
+#if INTERFACE_WORLDPOSOLD
 layout(location = 1) INTERFACEMODE vec3 WorldPosOld;
 #endif
-#if DEVICEPOS
+#if INTERFACE_DEVICEPOS
 layout(location = 2) INTERFACEMODE vec4 DevicePos;
 #endif
-#if DEVICEPOSOLD
+#if INTERFACE_DEVICEPOSOLD
 layout(location = 3) INTERFACEMODE vec4 DevicePosOld;
 #endif
-#if NORMAL
+#if INTERFACE_NORMAL
 layout(location = 4) INTERFACEMODE vec3 Normal;
 #endif
-#if TANGENT
+#if INTERFACE_TANGENT
 layout(location = 5) INTERFACEMODE vec3 Tangent;
 #endif
-#if UV
+#if INTERFACE_UV
 layout(location = 6) INTERFACEMODE vec2 UV;
 #endif
-#if MESHID
+#if INTERFACE_MESHID
 layout(location = 7) flat INTERFACEMODE uint MeshInstanceId;
 #endif

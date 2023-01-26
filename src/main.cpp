@@ -90,9 +90,18 @@ namespace cgbuffer {
         mScene->UseDefaultCamera(true);
 
         CGBuffer::OutputRecipe flatRedOnBlack{.Type = CGBuffer::FragmentOutputType::VEC4, .ImageFormat = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, .Result = "1, 0, 0, 1"};
-        mGBufferStage.AddOutput("flatRedOnBlack", flatRedOnBlack).Build(&mContext, mScene.get());
+        // mGBufferStage.AddOutput("flatRedOnBlack", flatRedOnBlack);
 
-        mSwapCopy.Init(&mContext, mGBufferStage.GetImageOutput("flatRedOnBlack"));
+        std::string_view       normalMappingCalc = "vec3 normaldiff = abs(Normal - NormalMapped);";
+        CGBuffer::OutputRecipe normalMapping{
+            .Type = CGBuffer::FragmentOutputType::VEC4, .ImageFormat = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, .Result = "normaldiff, 0.f", .Calculation = std::string(normalMappingCalc)};
+        normalMapping.EnableBuiltInFeature(CGBuffer::BuiltInFeaturesFlagBits::NORMALMAPPING);
+        mGBufferStage.AddOutput("normalMapping", normalMapping);
+
+        mGBufferStage.Build(&mContext, mScene.get());
+
+
+        mSwapCopy.Init(&mContext, mGBufferStage.GetImageOutput("normalMapping"));
         mSwapCopy.SetFlipY(true);
 
         RegisterRenderStage(&mGBufferStage);

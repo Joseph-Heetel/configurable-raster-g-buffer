@@ -5,7 +5,7 @@ namespace cgbuffer {
     class CGBuffer : public foray::stages::RasterizedRenderStage
     {
       public:
-        inline static constexpr uint32_t MAX_OUTPUT_COUNT = 8;
+        inline static constexpr uint32_t MAX_OUTPUT_COUNT = 16;
 
         enum class FragmentInputFlagBits : uint32_t
         {

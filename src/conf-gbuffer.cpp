@@ -13,21 +13,21 @@ namespace cgbuffer {
         switch(input)
         {
             case FragmentInputFlagBits::WORLDPOS:
-                return "WORLDPOS";
+                return "INTERFACE_WORLDPOS";
             case FragmentInputFlagBits::WORLDPOSOLD:
-                return "WORLDPOSOLD";
+                return "INTERFACE_WORLDPOSOLD";
             case FragmentInputFlagBits::DEVICEPOS:
-                return "DEVICEPOS";
+                return "INTERFACE_DEVICEPOS";
             case FragmentInputFlagBits::DEVICEPOSOLD:
-                return "DEVICEPOSOLD";
+                return "INTERFACE_DEVICEPOSOLD";
             case FragmentInputFlagBits::NORMAL:
-                return "NORMAL";
+                return "INTERFACE_NORMAL";
             case FragmentInputFlagBits::TANGENT:
-                return "TANGENT";
+                return "INTERFACE_TANGENT";
             case FragmentInputFlagBits::UV:
-                return "UV";
+                return "INTERFACE_UV";
             case FragmentInputFlagBits::MESHID:
-                return "MESHID";
+                return "INTERFACE_MESHID";
             default:
                 FORAY_THROWFMT("Unhandled FragmentInputFlagBits value 0x{:x}", (uint32_t)input);
         }
@@ -97,6 +97,7 @@ namespace cgbuffer {
                 AddFragmentInput(FragmentInputFlagBits::UV);
                 break;
             case BuiltInFeaturesFlagBits::NORMALMAPPING:
+                AddFragmentInput(FragmentInputFlagBits::UV);
                 AddFragmentInput(FragmentInputFlagBits::NORMAL);
                 AddFragmentInput(FragmentInputFlagBits::TANGENT);
                 break;
@@ -304,7 +305,7 @@ namespace cgbuffer {
         {
             if((interfaceFlags & flag) > 0)
             {
-                shaderConfig.Definitions.push_back(ToString((FragmentInputFlagBits)flag));
+                shaderConfig.Definitions.push_back(fmt::format("{}=1", ToString((FragmentInputFlagBits)flag)));
             }
         }
 
@@ -312,7 +313,7 @@ namespace cgbuffer {
         {
             if((featuresFlags & flag) > 0)
             {
-                shaderConfig.Definitions.push_back(ToString((BuiltInFeaturesFlagBits)flag));
+                shaderConfig.Definitions.push_back(fmt::format("{}=1", ToString((BuiltInFeaturesFlagBits)flag)));
             }
         }
 

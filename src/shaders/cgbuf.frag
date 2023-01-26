@@ -29,6 +29,30 @@ layout(location = 6) out OUT_6_TYPE out6;
 #if OUT_7
 layout(location = 7) out OUT_7_TYPE out7;
 #endif
+#if OUT_8
+layout(location = 8) out OUT_8_TYPE out8;
+#endif
+#if OUT_9
+layout(location = 9) out OUT_9_TYPE out9;
+#endif
+#if OUT_10
+layout(location = 10) out OUT_10_TYPE out10;
+#endif
+#if OUT_11
+layout(location = 11) out OUT_11_TYPE out11;
+#endif
+#if OUT_12
+layout(location = 12) out OUT_12_TYPE out12;
+#endif
+#if OUT_13
+layout(location = 13) out OUT_13_TYPE out13;
+#endif
+#if OUT_14
+layout(location = 14) out OUT_14_TYPE out14;
+#endif
+#if OUT_15
+layout(location = 15) out OUT_15_TYPE out15;
+#endif
 
 #include "bindpoints.glsl"
 #include "common/gltf_pushc.glsl"
@@ -43,11 +67,23 @@ void main()
     MaterialProbe probe = ProbeMaterial(material, UV);
 #else
 #if MATERIALPROBEALPHA || ALPHATEST
+#if MATERIALPROBE
+    bool isOpaque = probe.BaseColor.w > 0.f;
+#else
+    MaterialBufferObject material = GetMaterialOrFallback(PushConstant.MaterialIndex);
+
+    bool isOpaque = ProbeAlphaOpacity(material, uv);
+#endif
 #endif
 #endif
 #if ALPHATEST
+    if (!isOpaque)
+    {
+        discard;
+    }
 #endif
 #if NORMALMAPPING
+    vec3 NormalMapped = ApplyNormalMap(CalculateTBN(Normal, Tangent), probe);
 #endif
 
 #if OUT_0
@@ -81,5 +117,37 @@ void main()
 #if OUT_7
     OUT_7_CALC
     out7 = OUT_7_TYPE(OUT_7_RESULT);
+#endif
+#if OUT_8
+    OUT_8_CALC
+    out8 = OUT_8_TYPE(OUT_8_RESULT);
+#endif
+#if OUT_9
+    OUT_9_CALC
+    out9 = OUT_9_TYPE(OUT_9_RESULT);
+#endif
+#if OUT_10
+    OUT_10_CALC
+    out10 = OUT_10_TYPE(OUT_10_RESULT);
+#endif
+#if OUT_11
+    OUT_11_CALC
+    out11 = OUT_11_TYPE(OUT_11_RESULT);
+#endif
+#if OUT_12
+    OUT_12_CALC
+    out12 = OUT_12_TYPE(OUT_12_RESULT);
+#endif
+#if OUT_13
+    OUT_13_CALC
+    out13 = OUT_13_TYPE(OUT_13_RESULT);
+#endif
+#if OUT_14
+    OUT_14_CALC
+    out14 = OUT_14_TYPE(OUT_14_RESULT);
+#endif
+#if OUT_15
+    OUT_15_CALC
+    out15 = OUT_15_TYPE(OUT_15_RESULT);
 #endif
 }
