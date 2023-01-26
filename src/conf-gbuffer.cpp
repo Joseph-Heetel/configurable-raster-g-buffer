@@ -31,14 +31,14 @@ namespace cgbuffer {
     const CRaster::OutputRecipe CRaster::Templates::MaterialId = 
         {.Type = FragmentOutputType::INT, 
          .ImageFormat = VkFormat::VK_FORMAT_R32_SINT, 
-         .ClearValue         = {-1},
+         .ClearValue         = {{-1}},
          .Result = "PushConstant.MaterialIndex"};
 
     const CRaster::OutputRecipe CRaster::Templates::MeshInstanceId = 
         {.FragmentInputFlags = (uint32_t)FragmentInputFlagBits::MESHID,
          .Type               = FragmentOutputType::INT,
          .ImageFormat        = VkFormat::VK_FORMAT_R32_SINT,
-         .ClearValue         = {-1},
+         .ClearValue         = {{-1}},
          .Result             = "MeshInstanceId"};
 
     const CRaster::OutputRecipe CRaster::Templates::UV = 
@@ -63,7 +63,7 @@ namespace cgbuffer {
         {.FragmentInputFlags = (uint32_t)FragmentInputFlagBits::DEVICEPOS,
          .Type               = FragmentOutputType::VEC2,
          .ImageFormat        = VkFormat::VK_FORMAT_R16G16_SFLOAT,
-         .ClearValue         = {1.f, 0.f},
+         .ClearValue         = {{1.f, 0.f}},
          .Calculation        = "linearZ = DevicePos.z * DevicePow.w; derivative = max(abs(dFdx(linearZ)), abs(dFdy(linearZ)))",
          .Result             = "linearZ, derivative"};
     // clang-format on
@@ -226,7 +226,12 @@ namespace cgbuffer {
                                        .finalLayout    = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
     }
 
-    void CRaster::Build(foray::core::Context* context, foray::scene::Scene* scene, std::string_view name = "CRaster")
+    foray::core::ManagedImage* CRaster::GetDepthImage()
+    {
+        return &mDepthImage;
+    }
+
+    void CRaster::Build(foray::core::Context* context, foray::scene::Scene* scene, std::string_view name)
     {
         Destroy();
         mContext = context;
