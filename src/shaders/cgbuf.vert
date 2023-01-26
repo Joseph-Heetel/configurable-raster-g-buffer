@@ -38,9 +38,9 @@ void main()
     OldDevicePos = Camera.PreviousProjectionViewMatrix * ModelMatPrev * vec4(inPos, 1.f);
 #endif
 
-    #if UV
+#if INTERFACE_UV
     UV = inUV;
-    #endif
+#endif
 
     // Normal in world space
 #if(INTERFACE_NORMAL || INTERFACE_TANGENT)
