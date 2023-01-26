@@ -78,7 +78,7 @@ void main()
         #define EXISTS_MATERIAL 1
     #endif
 
-        bool isOpaque = ProbeAlphaOpacity(material, uv);
+        bool isOpaque = ProbeAlphaOpacity(material, UV);
         #define EXISTS_ISOPAQUE 1
     #endif
 #endif
@@ -89,7 +89,7 @@ void main()
     }
 #endif
 #if NORMALMAPPING
-    vec3 NormalMapped = ApplyNormalMap(CalculateTBN(Normal, Tangent), probe);
+    vec3 normalMapped = ApplyNormalMap(CalculateTBN(Normal, Tangent), probe);
     #define EXISTS_NORMALMAPPED 1
 #endif
 

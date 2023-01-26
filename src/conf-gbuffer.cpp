@@ -8,6 +8,67 @@
 #include <util/foray_shaderstagecreateinfos.hpp>
 
 namespace cgbuffer {
+
+    // clang-format off
+    const CGBuffer::OutputRecipe CGBuffer::Templates::WorldPos =  
+        {.FragmentInputFlags = (uint32_t)FragmentInputFlagBits::WORLDPOS,
+         .Type               = FragmentOutputType::VEC4,
+         .ImageFormat        = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
+         .Result             = "WorldPos,0"};
+
+    const CGBuffer::OutputRecipe CGBuffer::Templates::WorldNormal = 
+        {.BuiltInFeaturesFlags = (uint32_t)BuiltInFeaturesFlagBits::NORMALMAPPING,
+         .Type                 = FragmentOutputType::VEC4,
+         .ImageFormat          = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
+         .Result               = "normalMapped,0"};
+
+    const CGBuffer::OutputRecipe CGBuffer::Templates::Albedo = 
+        {.BuiltInFeaturesFlags = (uint32_t)BuiltInFeaturesFlagBits::MATERIALPROBE,
+         .Type                 = FragmentOutputType::VEC4,
+         .ImageFormat          = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
+         .Result               = "probe.BaseColor.rgb,1"};
+
+    const CGBuffer::OutputRecipe CGBuffer::Templates::MaterialId = 
+        {.Type = FragmentOutputType::INT, 
+         .ImageFormat = VkFormat::VK_FORMAT_R32_SINT, 
+         .ClearValue         = {-1},
+         .Result = "PushConstant.MaterialIndex"};
+
+    const CGBuffer::OutputRecipe CGBuffer::Templates::MeshInstanceId = 
+        {.FragmentInputFlags = (uint32_t)FragmentInputFlagBits::MESHID,
+         .Type               = FragmentOutputType::INT,
+         .ImageFormat        = VkFormat::VK_FORMAT_R32_SINT,
+         .ClearValue         = {-1},
+         .Result             = "MeshInstanceId"};
+
+    const CGBuffer::OutputRecipe CGBuffer::Templates::UV = 
+        {.FragmentInputFlags = (uint32_t)FragmentInputFlagBits::UV,
+         .Type               = FragmentOutputType::VEC2,
+         .ImageFormat        = VkFormat::VK_FORMAT_R16G16_SFLOAT,
+         .Result             = "UV"};
+
+    const CGBuffer::OutputRecipe CGBuffer::Templates::ScreenMotion = 
+        {.FragmentInputFlags = (uint32_t)FragmentInputFlagBits::DEVICEPOS | (uint32_t)FragmentInputFlagBits::DEVICEPOSOLD,
+         .Type               = FragmentOutputType::VEC2,
+         .ImageFormat        = VkFormat::VK_FORMAT_R16G16_SFLOAT,
+         .Result             = "((DevicePosOld.xy / DevicePosOld.w) - (DevicePos.xy / DevicePos.w)) * 0.5"};
+
+    const CGBuffer::OutputRecipe CGBuffer::Templates::WorldMotion = 
+        {.FragmentInputFlags = (uint32_t)FragmentInputFlagBits::WORLDPOS | (uint32_t)FragmentInputFlagBits::WORLDPOSOLD,
+         .Type               = FragmentOutputType::VEC4,
+         .ImageFormat        = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
+         .Result             = "WorldPosOld - WorldPos, 0.f"};
+
+    const CGBuffer::OutputRecipe CGBuffer::Templates::DepthAndDerivative = 
+        {.FragmentInputFlags = (uint32_t)FragmentInputFlagBits::DEVICEPOS,
+         .Type               = FragmentOutputType::VEC2,
+         .ImageFormat        = VkFormat::VK_FORMAT_R16G16_SFLOAT,
+         .ClearValue         = {1.f, 0.f},
+         .Calculation        = "linearZ = DevicePos.z * DevicePow.w; derivative = max(abs(dFdx(linearZ)), abs(dFdy(linearZ)))",
+         .Result             = "linearZ, derivative"};
+    // clang-format on
+
+
     std::string CGBuffer::ToString(FragmentInputFlagBits input)
     {
         switch(input)
@@ -135,8 +196,10 @@ namespace cgbuffer {
     CGBuffer& CGBuffer::AddOutput(std::string_view name, const OutputRecipe& recipe)
     {
         foray::Assert(mOutputMap.size() < MAX_OUTPUT_COUNT, fmt::format("Can not exceed maximum output count of {}", MAX_OUTPUT_COUNT));
+        foray::Assert(!mPipeline, "Must add outputs before building!");
         std::string keycopy(name);
-        mOutputMap[keycopy] = std::make_unique<Output>(name, recipe);
+        std::unique_ptr<Output>& output = mOutputMap[keycopy] = std::make_unique<Output>(name, recipe);
+        mOutputList.push_back(output.get());
         return *this;
     }
     const CGBuffer::OutputRecipe& CGBuffer::GetOutputRecipe(std::string_view name) const
@@ -180,7 +243,6 @@ namespace cgbuffer {
 
     void CGBuffer::CreateOutputs(const VkExtent2D& size)
     {
-        mOutputList.clear();
         for(auto& pair : mOutputMap)
         {
             foray::core::ManagedImage& image  = pair.second->Image;
@@ -193,7 +255,6 @@ namespace cgbuffer {
                                                          | VkImageUsageFlagBits::VK_IMAGE_USAGE_STORAGE_BIT | VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                                                      recipe.ImageFormat, size, name);
             image.Create(mContext, ci);
-            mOutputList.push_back(pair.second.get());
             std::string keycopy(name);
             mImageOutputs[keycopy] = &image;
         }
@@ -548,6 +609,8 @@ namespace cgbuffer {
             vkDestroyRenderPass(device, mRenderpass, nullptr);
             mRenderpass = nullptr;
         }
+        mOutputList.clear();
+        mOutputMap.clear();
     }
 
 }  // namespace cgbuffer
