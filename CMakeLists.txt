@@ -35,7 +35,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS ${STRICT_FLAGS})
 
 # Set directories via compile macros
 target_compile_options(${PROJECT_NAME} PUBLIC "-DCWD_OVERRIDE=\"${CMAKE_CURRENT_LIST_DIR}\"")
-target_compile_options(${PROJECT_NAME} PUBLIC "-DDATA_DIR=\"${CMAKE_SOURCE_DIR}/data\"")
+target_compile_options(${PROJECT_NAME} PUBLIC "-DSCENE_DIR=\"${CMAKE_CURRENT_LIST_DIR}/sponza_model_smalltex/Main/NewSponza_Main_Blender_glTF.gltf\"")
 target_compile_options(${PROJECT_NAME} PUBLIC "-DFORAY_SHADER_DIR=\"$CACHE{FORAY_SHADER_DIR}\"")
 
 # Link foray lib
