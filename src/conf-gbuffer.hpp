@@ -179,10 +179,13 @@ namespace cgbuffer {
         std::string mDepthOutputName = "";
         std::string mName            = "";
 
+        uint32_t mMaxColorAttachmentCount = 0U;
+
         static std::string ToString(FragmentOutputType type);
         static std::string ToString(BuiltInFeaturesFlagBits feature);
         static std::string ToString(FragmentInputFlagBits input);
 
+        void         CheckDeviceColorAttachmentCount();
         void         CreateOutputs(const VkExtent2D& size);
         void         CreateRenderPass();
         void         CreateFrameBuffer();

@@ -35,7 +35,7 @@ void main()
     DevicePos    = Camera.ProjectionViewMatrix * ModelMat * vec4(inPos, 1.f);
     gl_Position     = DevicePos;
 #if INTERFACE_DEVICEPOSOLD
-    OldDevicePos = Camera.PreviousProjectionViewMatrix * ModelMatPrev * vec4(inPos, 1.f);
+    DevicePosOld = Camera.PreviousProjectionViewMatrix * ModelMatPrev * vec4(inPos, 1.f);
 #endif
 
 #if INTERFACE_UV

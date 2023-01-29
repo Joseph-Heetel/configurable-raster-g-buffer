@@ -17,13 +17,15 @@ namespace cgbuffer {
          .Result             = "WorldPos,0"};
 
     const CRaster::OutputRecipe CRaster::Templates::WorldNormal = 
-        {.BuiltInFeaturesFlags = (uint32_t)BuiltInFeaturesFlagBits::NORMALMAPPING,
+        {.FragmentInputFlags = (uint32_t)FragmentInputFlagBits::UV | (uint32_t)FragmentInputFlagBits::NORMAL | (uint32_t)FragmentInputFlagBits::TANGENT,
+         .BuiltInFeaturesFlags = (uint32_t)BuiltInFeaturesFlagBits::NORMALMAPPING,
          .Type                 = FragmentOutputType::VEC4,
          .ImageFormat          = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
          .Result               = "normalMapped,0"};
 
     const CRaster::OutputRecipe CRaster::Templates::Albedo = 
-        {.BuiltInFeaturesFlags = (uint32_t)BuiltInFeaturesFlagBits::MATERIALPROBE,
+        {.FragmentInputFlags = (uint32_t)FragmentInputFlagBits::UV,
+         .BuiltInFeaturesFlags = (uint32_t)BuiltInFeaturesFlagBits::MATERIALPROBE,
          .Type                 = FragmentOutputType::VEC4,
          .ImageFormat          = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
          .Result               = "probe.BaseColor.rgb,1"};
@@ -64,7 +66,7 @@ namespace cgbuffer {
          .Type               = FragmentOutputType::VEC2,
          .ImageFormat        = VkFormat::VK_FORMAT_R16G16_SFLOAT,
          .ClearValue         = {{1.f, 0.f}},
-         .Calculation        = "linearZ = DevicePos.z * DevicePow.w; derivative = max(abs(dFdx(linearZ)), abs(dFdy(linearZ)))",
+         .Calculation        = "float linearZ = DevicePos.z * DevicePos.w; float derivative = max(abs(dFdx(linearZ)), abs(dFdy(linearZ)));",
          .Result             = "linearZ, derivative"};
     // clang-format on
 
@@ -148,20 +150,24 @@ namespace cgbuffer {
         BuiltInFeaturesFlags |= (uint32_t)feature;
         switch(feature)
         {
-            case BuiltInFeaturesFlagBits::MATERIALPROBE:
+            case BuiltInFeaturesFlagBits::MATERIALPROBE: {
                 AddFragmentInput(FragmentInputFlagBits::UV);
                 break;
-            case BuiltInFeaturesFlagBits::MATERIALPROBEALPHA:
+            }
+            case BuiltInFeaturesFlagBits::MATERIALPROBEALPHA: {
                 AddFragmentInput(FragmentInputFlagBits::UV);
                 break;
-            case BuiltInFeaturesFlagBits::ALPHATEST:
+            }
+            case BuiltInFeaturesFlagBits::ALPHATEST: {
                 AddFragmentInput(FragmentInputFlagBits::UV);
                 break;
-            case BuiltInFeaturesFlagBits::NORMALMAPPING:
+            }
+            case BuiltInFeaturesFlagBits::NORMALMAPPING: {
                 AddFragmentInput(FragmentInputFlagBits::UV);
                 AddFragmentInput(FragmentInputFlagBits::NORMAL);
                 AddFragmentInput(FragmentInputFlagBits::TANGENT);
                 break;
+            }
             default:
                 break;
         }
@@ -173,20 +179,24 @@ namespace cgbuffer {
         mBuiltInFeaturesFlagsGlobal |= (uint32_t)feature;
         switch(feature)
         {
-            case BuiltInFeaturesFlagBits::MATERIALPROBE:
+            case BuiltInFeaturesFlagBits::MATERIALPROBE: {
                 mInterfaceFlagsGlobal |= (uint32_t)FragmentInputFlagBits::UV;
                 break;
-            case BuiltInFeaturesFlagBits::MATERIALPROBEALPHA:
+            }
+            case BuiltInFeaturesFlagBits::MATERIALPROBEALPHA: {
                 mInterfaceFlagsGlobal |= (uint32_t)FragmentInputFlagBits::UV;
                 break;
-            case BuiltInFeaturesFlagBits::ALPHATEST:
+            }
+            case BuiltInFeaturesFlagBits::ALPHATEST: {
                 mInterfaceFlagsGlobal |= (uint32_t)FragmentInputFlagBits::UV;
                 break;
-            case BuiltInFeaturesFlagBits::NORMALMAPPING:
+            }
+            case BuiltInFeaturesFlagBits::NORMALMAPPING: {
                 mInterfaceFlagsGlobal |= (uint32_t)FragmentInputFlagBits::UV;
                 mInterfaceFlagsGlobal |= (uint32_t)FragmentInputFlagBits::NORMAL;
                 mInterfaceFlagsGlobal |= (uint32_t)FragmentInputFlagBits::TANGENT;
                 break;
+            }
             default:
                 break;
         }
@@ -195,9 +205,10 @@ namespace cgbuffer {
 
     CRaster& CRaster::AddOutput(std::string_view name, const OutputRecipe& recipe)
     {
-        foray::Assert(mOutputMap.size() < MAX_OUTPUT_COUNT, fmt::format("Can not exceed maximum output count of {}", MAX_OUTPUT_COUNT));
+        std::string keycopy(name);
+        FORAY_ASSERTFMT(mOutputMap.size() < MAX_OUTPUT_COUNT, "Can not exceed maximum output count of {}", MAX_OUTPUT_COUNT);
+        FORAY_ASSERTFMT(!mOutputMap.contains(keycopy), "Raster stage already configured with an output named \"{}\"", name);
         foray::Assert(!mPipeline, "Must add outputs before building!");
-        std::string              keycopy(name);
         std::unique_ptr<Output>& output = mOutputMap[keycopy] = std::make_unique<Output>(name, recipe);
         mOutputList.push_back(output.get());
         return *this;
@@ -238,6 +249,7 @@ namespace cgbuffer {
         mScene   = scene;
         mName    = std::string(name);
 
+        CheckDeviceColorAttachmentCount();
         CreateOutputs(mContext->GetSwapchainSize());
         CreateRenderPass();
         CreateFrameBuffer();
@@ -245,6 +257,14 @@ namespace cgbuffer {
         CreateDescriptorSets();
         CreatePipelineLayout();
         CreatePipeline();
+    }
+
+    void CRaster::CheckDeviceColorAttachmentCount()
+    {
+        mMaxColorAttachmentCount = mContext->VkbPhysicalDevice->properties.limits.maxColorAttachments;
+        FORAY_ASSERTFMT(mOutputList.size() <= mMaxColorAttachmentCount,
+                        "Physical Device supports max of {} color attachments! As configured requires {}. See VkPhysicalDeviceLimits::maxColorAttachments.",
+                        mMaxColorAttachmentCount, mOutputList.size())
     }
 
     void CRaster::CreateOutputs(const VkExtent2D& size)

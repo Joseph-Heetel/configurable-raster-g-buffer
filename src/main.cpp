@@ -90,21 +90,29 @@ namespace cgbuffer {
         mScene->UseDefaultCamera(true);
 
         CRaster::OutputRecipe flatRedOnBlack{.Type = CRaster::FragmentOutputType::VEC4, .ImageFormat = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, .Result = "1, 0, 0, 1"};
-        mGBufferStage.AddOutput("flatRedOnBlack", flatRedOnBlack);
+        // mGBufferStage.AddOutput("flatRedOnBlack", flatRedOnBlack);
 
         CRaster::OutputRecipe normalMapping{.Type        = CRaster::FragmentOutputType::VEC4,
                                             .ImageFormat = VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
                                             .Calculation = "vec3 normaldiff = abs(Normal - normalMapped);",
                                             .Result      = "normaldiff, 0.f"};
         normalMapping.EnableBuiltInFeature(CRaster::BuiltInFeaturesFlagBits::NORMALMAPPING);
-        mGBufferStage.AddOutput("normalMapping", normalMapping);
-        mGBufferStage.AddOutput("albedo", CRaster::Templates::Albedo);
+        // mGBufferStage.AddOutput("normalMapping", normalMapping);
+        // mGBufferStage.AddOutput("albedo", CRaster::Templates::Albedo);
+        mGBufferStage.AddOutput("pos", CRaster::Templates::WorldPos);
+        mGBufferStage.AddOutput("normal", CRaster::Templates::WorldNormal);
+        mGBufferStage.AddOutput("motion", CRaster::Templates::WorldMotion);
+        mGBufferStage.AddOutput("scrmotion", CRaster::Templates::ScreenMotion);
+        mGBufferStage.AddOutput("matid", CRaster::Templates::MaterialId);
+        mGBufferStage.AddOutput("meshid", CRaster::Templates::MeshInstanceId);
+        mGBufferStage.AddOutput("uv", CRaster::Templates::UV);
+        mGBufferStage.AddOutput("depth", CRaster::Templates::DepthAndDerivative);
         mGBufferStage.EnableBuiltInFeature(CRaster::BuiltInFeaturesFlagBits::ALPHATEST);
 
         mGBufferStage.Build(&mContext, mScene.get());
 
 
-        mSwapCopy.Init(&mContext, mGBufferStage.GetImageOutput("albedo"));
+        mSwapCopy.Init(&mContext, mGBufferStage.GetImageOutput("normal"));
         mSwapCopy.SetFlipY(true);
 
         RegisterRenderStage(&mGBufferStage);
